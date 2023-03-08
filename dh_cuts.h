@@ -117,7 +117,7 @@ static int const dh_caught_signals[] = { SIGILL, SIGFPE, SIGSEGV, SIGBUS, SIGSYS
 struct dh_state {
 	sigjmp_buf *crash_jump;
 	int         stack_depth;
-	char       *stack[DH_MAX_DEPTH];
+	char        stack[DH_MAX_DEPTH][DH_MAX_NAME_LENGTH];
 };
 
 struct dh_sink {
@@ -267,20 +267,20 @@ dh_push(const char *format, ...)
 	char *str;
 	if (dh_state.stack_depth >= DH_MAX_DEPTH)
 		dh_throw("dh_push: exceeded maximum test hierarchy depth");
-	str = malloc(DH_MAX_NAME_LENGTH);
+	str = dh_state.stack[dh_state.stack_depth];
 
 	va_list va;
 	va_start(va, format);
-	vsnprintf(str, DH_MAX_NAME_LENGTH, format, va);
+	vsnprintf(str, sizeof(dh_state.stack[0]), format, va);
 	va_end(va);
 
-	dh_state.stack[dh_state.stack_depth++] = str;
+	dh_state.stack_depth++;
 }
 
 void
 dh_pop(void)
 {
-	free(dh_state.stack[--dh_state.stack_depth]);
+	dh_state.stack_depth--;
 	if (dh_sink.print_depth > dh_state.stack_depth) {
 		dh_sink.print_depth = dh_state.stack_depth;
 	}
@@ -309,15 +309,14 @@ dh_branch_end_(struct dh_branch *branch)
 void
 dh_throw_(const char *fn, int ln, const char *format, ...)
 {
-	char *str = malloc(DH_MAX_NAME_LENGTH);
+	char str[DH_MAX_NAME_LENGTH];
 
 	va_list va;
 	va_start(va, format);
-	vsnprintf(str, DH_MAX_NAME_LENGTH, format, va);
+	vsnprintf(str, sizeof(str), format, va);
 	va_end(va);
 
 	dh_report_(DH_CODE_THROW, fn, ln, str);
-	free(str);
 	dh_forfeit_(DH_CODE_THROW);
 }
 

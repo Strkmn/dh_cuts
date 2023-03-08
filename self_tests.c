@@ -50,6 +50,30 @@ test_forfeit_on_failure(void)
 	dh_pop();
 }
 
+static void
+test_stack_overflow(void)
+{
+	int i;
+	dh_push("stack overflow");
+	pid_t pid = fork();
+	if (pid == 0) {
+		dh_init(fopen("/dev/null", "w"));
+		dh_branch(
+			for (i = 0; i < DH_MAX_DEPTH * 10; i++)
+				dh_push("step %d", i + 1);
+			for (i = 0; i < DH_MAX_DEPTH * 10; i++)
+				dh_pop();
+		)
+		exit(0);
+	}
+	if (pid > 0) {
+		int ret = 0;
+		waitpid(pid, &ret, 0);
+		dh_assert(ret == 0);
+	}
+	dh_pop();
+}
+
 int
 main()
 {
@@ -57,6 +81,7 @@ main()
 	dh_push("dh_cuts self-tests");
 	dh_branch( test_crash_recovery(); )
 	dh_branch( test_forfeit_on_failure(); )
+	dh_branch( test_stack_overflow(); )
 	dh_pop();
 	dh_summarize();
 	return EXIT_SUCCESS;

@@ -264,7 +264,10 @@ dh_summarize(void)
 void
 dh_push(const char *format, ...)
 {
-	char *str = malloc(DH_MAX_NAME_LENGTH);
+	char *str;
+	if (dh_state.stack_depth >= DH_MAX_DEPTH)
+		dh_throw("dh_push: exceeded maximum test hierarchy depth");
+	str = malloc(DH_MAX_NAME_LENGTH);
 
 	va_list va;
 	va_start(va, format);
